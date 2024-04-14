@@ -1,7 +1,5 @@
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace _Game.Scripts.Services.Input
 {
@@ -10,21 +8,22 @@ namespace _Game.Scripts.Services.Input
         private const string MOVEMENT_ANIMATION_VARIABLE = "movement";
         
         [SerializeField] private float walkSpeed = 2f;
-
-        public Transform playerModel;
-
+        
         [SerializeField] private float rotationSpeed = 10f;
 
-        [SerializeField] private float runSpeed = 4f;
+        [SerializeField] private float runSpeed = 5f;
+        
+        [SerializeField] private float runChangingScale = 5f;
+        
+        private float _currentMoveSpeed;
         
         private CharacterController _characterController;
+
         private Animator _characterAnimator;
 
         private Vector2 _playerDirection;
 
-        private float _currentMoveSpeed;
-
-        private bool _isRunning = false;
+        public Transform playerModel;
 
         private void OnValidate()
         {
@@ -32,23 +31,41 @@ namespace _Game.Scripts.Services.Input
             _characterAnimator ??= GetComponent<Animator>();
         }
 
-        void Update()
+        private void Start()
         {
-            Move();
-            Run();
+            _currentMoveSpeed = walkSpeed;
         }
 
+        private void Update()
+        {
+            Move();
+            
+        }
+
+        private void IncreaseRunSpeed()
+        {
+            if (_currentMoveSpeed < runSpeed)
+            {
+                _currentMoveSpeed += Time.deltaTime * runChangingScale;
+            }
+        }
+        private void DecreaseRunSpeed()
+        {
+            if (_currentMoveSpeed > walkSpeed)
+            {
+                _currentMoveSpeed -= Time.deltaTime * runChangingScale;
+            }
+        }
+        
         private void Run()
         {
             if (UnityEngine.Input.GetKey(KeyCode.LeftShift))
             {
-                _isRunning = true;
-                _currentMoveSpeed = runSpeed;
+                IncreaseRunSpeed();
             }
             else
             {
-                _currentMoveSpeed = walkSpeed;
-                _isRunning = false;
+                DecreaseRunSpeed();
             }
         }
 
@@ -60,11 +77,11 @@ namespace _Game.Scripts.Services.Input
             float animValue = 0;
             if (_playerDirection != Vector2.zero)
             {
+                Run();
                 _characterController.Move(new Vector3(_playerDirection.x, 0, _playerDirection.y) * (Time.deltaTime * _currentMoveSpeed)); 
-                animValue = Math.Max(Math.Abs(_playerDirection.x), Math.Abs(_playerDirection.y));
-                if (_isRunning) animValue += 1f;
+                animValue = Math.Max(Math.Abs(_playerDirection.x), Math.Abs(_playerDirection.y)) * _currentMoveSpeed;
+                _characterAnimator.SetFloat(MOVEMENT_ANIMATION_VARIABLE, animValue);
             }
-            _characterAnimator.SetFloat(MOVEMENT_ANIMATION_VARIABLE, animValue);
         }
 
         private void Rotate()
